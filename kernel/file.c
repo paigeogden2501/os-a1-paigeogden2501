@@ -25,6 +25,23 @@ fileinit(void)
   initlock(&ftable.lock, "ftable");
 }
 
+// Count open entries in the system file table.
+uint64
+nopenfile(void)
+{
+  struct file *f;
+  uint64 count = 0;
+
+  acquire(&ftable.lock);
+  for (f = ftable.file; f < ftable.file + NFILE; f++) {
+    if (f->ref > 0)
+      count++;
+  }
+  release(&ftable.lock);
+
+  return count;
+}
+
 // Allocate a file structure.
 struct file *
 filealloc(void)

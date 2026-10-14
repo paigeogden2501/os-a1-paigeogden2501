@@ -10,6 +10,23 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+// Count processes that are not UNUSED.
+uint64
+nproc(void)
+{
+  struct proc *p;
+  uint64 count = 0;
+
+  for (p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if (p->state != UNUSED)
+      count++;
+    release(&p->lock);
+  }
+
+  return count;
+}
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -123,6 +140,7 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
+  p->tracemask = 0;
   p->state = USED;
 
   // Allocate a trapframe page.
@@ -168,6 +186,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->tracemask = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -288,6 +307,7 @@ kfork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+  np->tracemask = p->tracemask;
 
   pid = np->pid;
 
